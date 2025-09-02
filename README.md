@@ -2,6 +2,8 @@
 
 **Snap2Recipe** is an AI-powered application that transforms food images into complete, structured recipes. Built with a modern, responsive frontend and powered by advanced computer vision and generative AI models, it demonstrates how data-driven systems can be applied in real-world scenarios to deliver intelligent, user-centric solutions.
 
+## Demo Video
+[![Watch the demo](Snap2Recipe.png)](Snap2Recipe%20Video.mp4)
 
 ## How it Works
 
@@ -19,11 +21,6 @@
 * **AI/ML API:** Google Gemini API (Vision + Text generation)
 * **Hosting:** Deployable via GitHub Pages, Vercel, or Netlify
 * * **Fonts & Icons:** Google Fonts (Spline Sans), Material Symbols
-
-
-## Demo Preview
-
-
 
 
 ## How It Works
