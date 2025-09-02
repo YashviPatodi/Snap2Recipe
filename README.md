@@ -41,8 +41,3 @@
 * A practical case study for understanding **multimodal AI applications**.
 
 
-   * Or deploy via GitHub Pages / Netlify / Vercel for live hosting.
-
----
-
-Would you like me to also add a **"Future Enhancements" section** (like multi-language support, nutritional breakdown, or mobile PWA), so it reads like a forward-looking project in your portfolio?
