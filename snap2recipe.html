@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Snap2Recipe - Image-to-Recipe Finder</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+body { 
+    font-family: 'Spline Sans', sans-serif; 
+    background: #f8f8f8; 
+    color: #1a1a1a; 
+}
+.ingredients-list, .instructions-list { 
+    max-height: 32rem; 
+    overflow-y: auto; 
+}
+.ingredients-list::-webkit-scrollbar, .instructions-list::-webkit-scrollbar { 
+    width: 8px; 
+}
+.ingredients-list::-webkit-scrollbar-thumb, .instructions-list::-webkit-scrollbar-thumb { 
+    background: #f9d506; 
+    border-radius: 10px; 
+}
+.loader {
+    border-top-color: #f9d506;
+    -webkit-animation: spinner 1.5s linear infinite;
+    animation: spinner 1.5s linear infinite;
+}
+@-webkit-keyframes spinner {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+@keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body class="bg-gray-100 text-black">
+<div class="flex flex-col min-h-screen">
+
+<header class="border-b border-gray-200 p-4 flex items-center space-x-2 bg-white shadow-sm">
+    <span class="material-symbols-outlined text-3xl text-yellow-400">photo_camera</span>
+    <h1 class="text-2xl font-bold text-gray-800">Snap2Recipe</h1>
+</header>
+
+<main class="flex-grow flex flex-col justify-start items-center p-4 md:p-12">
+    <div class="max-w-4xl w-full space-y-8 text-center bg-white p-6 md:p-10 rounded-3xl shadow-lg">
+
+
+        <div class="mb-8">
+            <h2 class="text-3xl font-extrabold text-yellow-500 mb-2">Recipe in a Snap.</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                Don't let a mystery dish haunt you. With Snap2Recipe, you can finally learn how to recreate that amazing meal you saw online or in a restaurant. Just upload an image, and it'll give you a perfect recipe, complete with vegetarian, vegan, and allergy-friendly options.
+            </p>
+        </div>
+
+
+        <div class="p-8 rounded-2xl border-2 border-dashed border-gray-300 hover:border-yellow-400 transition-colors">
+            <input type="file" id="imageInput" accept="image/*" class="hidden"/>
+            <button onclick="document.getElementById('imageInput').click()" 
+                id="uploadButton"
+                class="bg-yellow-400 text-black py-3 px-6 rounded-full font-semibold hover:bg-yellow-300 transition">
+                Upload Image
+            </button>
+            <p id="upload-status" class="mt-4 text-gray-500 text-sm">Drag and drop your image here or click Upload.</p>
+        </div>
+
+        <div id="loading" class="hidden flex flex-col items-center">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            <p class="text-gray-600 font-semibold">Generating Recipe...</p>
+        </div>
+
+        <div id="results-container" class="hidden">
+
+            <div class="mb-8">
+                <h3 class="text-2xl font-bold">Predicted Dish</h3>
+                <p id="dishTitle" class="text-4xl font-bold text-yellow-500 mt-2">...</p>
+                <p id="confidenceScore" class="text-gray-600 mt-1"></p>
+                <p id="alternativesList" class="text-gray-500 text-sm"></p>
+            </div>
+
+            <div id="recipeCard" class="bg-white shadow-xl p-6 rounded-3xl border border-gray-200 text-left">
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/3 flex-shrink-0">
+                        <img id="dishImage" src="https://placehold.co/300x200/e5e7eb/6b7280?text=Upload+Food+Image" class="w-full h-auto object-cover rounded-xl shadow-md"/>
+                    </div>
+                    <div class="md:w-2/3 space-y-4">
+                        <h4 id="recipeTitle" class="text-2xl font-bold"></h4>
+                        <p id="recipeSummary" class="text-gray-600 leading-relaxed"></p>
+                        <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                            <p><strong>⏱ Cook Time:</strong> <span id="cookTime">-</span></p>
+                            <p><strong>🍽 Servings:</strong> <span id="servings">-</span></p>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-2 text-gray-700">Ingredients:</h5>
+                            <ul id="ingredientsList" class="ingredients-list list-disc list-inside text-gray-600"></ul>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-2 text-gray-700">Instructions:</h5>
+                            <ol id="instructionsList" class="instructions-list list-decimal list-inside text-gray-600"></ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Recipe Section -->
+            <div id="custom-recipe-section" class="hidden w-full text-left mt-8">
+                <h4 class="text-lg font-semibold text-gray-700 mb-2">Create a Custom Recipe</h4>
+                <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="vegetarianOption" class="rounded text-yellow-500 focus:ring-yellow-400"/>
+                        <span class="text-gray-700">Vegetarian</span>
+                    </label>
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="veganOption" class="rounded text-yellow-500 focus:ring-yellow-400"/>
+                        <span class="text-gray-700">Vegan</span>
+                    </label>
+                </div>
+                <div class="mt-4">
+                    <input type="text" id="allergiesInput" placeholder="List allergies (e.g., peanuts, gluten, dairy)"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"/>
+                </div>
+                <div class="mt-4 text-center">
+                    <button id="generateCustomRecipeBtn"
+                        class="bg-yellow-400 text-black py-2 px-4 rounded-full font-semibold hover:bg-yellow-300 transition">
+                        Generate Custom Recipe
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative" role="alert">
+            <strong class="font-bold">Error!</strong>
+            <span id="error-text" class="block sm:inline">Something went wrong. Please try again.</span>
+        </div>
+
+    </div>
+</main>
+</div>
+
+<script>
+    const imageInput = document.getElementById("imageInput");
+    const uploadButton = document.getElementById("uploadButton");
+    const uploadStatus = document.getElementById("upload-status");
+    const loading = document.getElementById("loading");
+    const resultsContainer = document.getElementById("results-container");
+    const recipeCard = document.getElementById("recipeCard");
+    const dishImage = document.getElementById("dishImage");
+    const dishTitle = document.getElementById("dishTitle");
+    const confidenceScore = document.getElementById("confidenceScore");
+    const alternativesList = document.getElementById("alternativesList");
+    const recipeTitle = document.getElementById("recipeTitle");
+    const recipeSummary = document.getElementById("recipeSummary");
+    const cookTime = document.getElementById("cookTime");
+    const servings = document.getElementById("servings");
+    const ingredientsList = document.getElementById("ingredientsList");
+    const instructionsList = document.getElementById("instructionsList");
+    const errorMessage = document.getElementById("error-message");
+    const errorText = document.getElementById("error-text");
+    const vegetarianOption = document.getElementById("vegetarianOption");
+    const veganOption = document.getElementById("veganOption");
+    const allergiesInput = document.getElementById("allergiesInput");
+    const customRecipeSection = document.getElementById("custom-recipe-section");
+    const generateCustomRecipeBtn = document.getElementById("generateCustomRecipeBtn");
+
+    const apiKey = "abcd1234"; // API key
+    let originalDishName = "";
+    let originalImageData = null;
+
+    function updateRecipeUI(recipeData) {
+        recipeTitle.innerText = recipeData.title || "No recipe found";
+        recipeSummary.innerText = recipeData.summary || "No summary available.";
+        cookTime.innerText = recipeData.cookTime || "-";
+        servings.innerText = recipeData.servings || "-";
+
+        
+        ingredientsList.innerHTML = "";
+        if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+            recipeData.ingredients.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item;
+                ingredientsList.appendChild(li);
+            });
+        } else {
+            const li = document.createElement("li");
+            li.textContent = "No ingredients listed.";
+            ingredientsList.appendChild(li);
+        }
+
+        
+        instructionsList.innerHTML = "";
+        if (recipeData.instructions && recipeData.instructions.length > 0) {
+            recipeData.instructions.forEach(step => {
+                const li = document.createElement("li");
+                li.textContent = step;
+                instructionsList.appendChild(li);
+            });
+        } else {
+            const li = document.createElement("li");
+            li.textContent = "No instructions available.";
+            instructionsList.appendChild(li);
+        }
+    }
+
+    
+    imageInput.addEventListener("change", async function() {
+        const file = this.files[0];
+        if (!file) return;
+
+        
+        resultsContainer.classList.add("hidden");
+        errorMessage.classList.add("hidden");
+        loading.classList.remove("hidden");
+        uploadStatus.innerText = "Analyzing image...";
+        uploadButton.disabled = true;
+        customRecipeSection.classList.add("hidden");
+
+        const reader = new FileReader();
+        reader.onloadend = async function() {
+            const base64Data = reader.result.split(',')[1];
+            dishImage.src = reader.result;
+            originalImageData = base64Data; 
+
+            const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=" + apiKey;
+
+            let userQuery = "Identify the food item and provide a detailed, easy-to-follow recipe. The recipe should include a 'title', 'summary', 'cookTime' in minutes, 'servings', a list of 'ingredients' as strings, and a list of 'instructions' as strings for each step.";
+            const systemPrompt = "You are a world-class culinary expert. Your task is to identify the food item in the image and provide a detailed, easy-to-follow recipe for it. The response must be a single, valid JSON object with the following schema.";
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: userQuery },
+                            {
+                                inlineData: {
+                                    mimeType: file.type,
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    }
+                ],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "dish": { "type": "STRING" },
+                            "confidence": { "type": "NUMBER" },
+                            "alternatives": { 
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "name": { "type": "STRING" },
+                                        "confidence": { "type": "NUMBER" }
+                                    }
+                                }
+                            },
+                            "recipe": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "title": { "type": "STRING" },
+                                    "summary": { "type": "STRING" },
+                                    "cookTime": { "type": "STRING" },
+                                    "servings": { "type": "STRING" },
+                                    "ingredients": {
+                                        "type": "ARRAY",
+                                        "items": { "type": "STRING" }
+                                    },
+                                    "instructions": {
+                                        "type": "ARRAY",
+                                        "items": { "type": "STRING" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const jsonContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!jsonContent) {
+                    throw new Error("API response was empty or malformed.");
+                }
+
+                const data = JSON.parse(jsonContent);
+
+                originalDishName = data.dish;
+                
+                updateRecipeUI(data.recipe);
+
+                dishTitle.innerText = data.dish || "Unknown Dish";
+                confidenceScore.innerText = data.confidence ? `Confidence: ${(data.confidence * 100).toFixed(1)}%` : "";
+                alternativesList.innerText = (data.alternatives || []).length > 0 ? "Other guesses: " + (data.alternatives || []).map(a => `${a.name} (${(a.confidence * 100).toFixed(0)}%)`).join(", ") : "";
+                
+                resultsContainer.classList.remove("hidden");
+                customRecipeSection.classList.remove("hidden");
+
+            } catch (err) {
+                console.error("Error processing request:", err);
+                errorText.innerText = err.message || "An unexpected error occurred. Please try again.";
+                errorMessage.classList.remove("hidden");
+            } finally {
+                loading.classList.add("hidden");
+                uploadStatus.innerText = "Drag and drop your image here or click Upload.";
+                uploadButton.disabled = false;
+            }
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    generateCustomRecipeBtn.addEventListener("click", async function() {
+        if (!originalDishName || !originalImageData) {
+            errorText.innerText = "Please upload an image first to get a base recipe.";
+            errorMessage.classList.remove("hidden");
+            return;
+        }
+
+   
+        errorMessage.classList.add("hidden");
+        loading.classList.remove("hidden");
+        generateCustomRecipeBtn.disabled = true;
+        uploadButton.disabled = true;
+        
+        const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=" + apiKey;
+
+        let userQuery = `Based on the dish, "${originalDishName}", please provide a new recipe. The recipe should be in the same JSON format as before, with a title, summary, cookTime, servings, ingredients list, and instructions.`;
+        const systemPrompt = "You are a world-class culinary expert. Your task is to identify the food item in the image and provide a detailed, easy-to-follow recipe for it. The response must be a single, valid JSON object with the following schema.";
+
+        const isVegetarian = vegetarianOption.checked;
+        const isVegan = veganOption.checked;
+        const allergies = allergiesInput.value.trim();
+
+        if (isVegan) {
+            userQuery += " Ensure the recipe is 100% VEGAN (no meat, poultry, fish, eggs, or dairy).";
+        } else if (isVegetarian) {
+            userQuery += " Ensure the recipe is 100% VEGETARIAN (no meat, poultry, or fish).";
+        }
+        
+        if (allergies) {
+            userQuery += ` Ensure the recipe is completely free of the following allergens: ${allergies}.`;
+        }
+
+        const payload = {
+            contents: [
+                {
+                    role: "user",
+                    parts: [
+                        { text: userQuery },
+                        {
+                            inlineData: {
+                                mimeType: "image/jpeg", // Assume a common image type for the stored data
+                                data: originalImageData
+                            }
+                        }
+                    ]
+                }
+            ],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        "dish": { "type": "STRING" },
+                        "recipe": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "title": { "type": "STRING" },
+                                "summary": { "type": "STRING" },
+                                "cookTime": { "type": "STRING" },
+                                "servings": { "type": "STRING" },
+                                "ingredients": {
+                                    "type": "ARRAY",
+                                    "items": { "type": "STRING" }
+                                },
+                                "instructions": {
+                                    "type": "ARRAY",
+                                    "items": { "type": "STRING" }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            }
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API call failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!jsonContent) {
+                throw new Error("API response was empty or malformed.");
+            }
+
+            const data = JSON.parse(jsonContent);
+            updateRecipeUI(data.recipe);
+            dishTitle.innerText = data.dish || "Unknown Dish";
+
+        } catch (err) {
+            console.error("Error processing custom recipe request:", err);
+            errorText.innerText = err.message || "An unexpected error occurred. Please try again with different preferences.";
+            errorMessage.classList.remove("hidden");
+        } finally {
+            loading.classList.add("hidden");
+            generateCustomRecipeBtn.disabled = false;
+            uploadButton.disabled = false;
+        }
+    });
+
+    // Handle mutual exclusion for dietary checkboxes
+    vegetarianOption.addEventListener("change", function() {
+        if (this.checked) {
+            veganOption.checked = false;
+        }
+    });
+    veganOption.addEventListener("change", function() {
+        if (this.checked) {
+            vegetarianOption.checked = false;
+        }
+    });
+</script>
+</body>
+</html>
